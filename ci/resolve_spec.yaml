@@ -1,0 +1,32 @@
+version: 0.1
+component: build
+timeoutInSeconds: 600
+shell: bash
+failImmediatelyOnError: true
+env:
+  exportedVariables:
+    - RELEASE
+    - BACKEND_IMAGE
+    - FRONTEND_IMAGE
+    - FUNCTION_IMAGE
+    - FUNCTION_DIGEST
+inputArtifacts:
+  - name: release-manifest
+    type: STAGE_ARTIFACT
+    location: .release/input-release.json
+steps:
+  - type: Command
+    name: Verify published OCIR digests
+    timeoutInSeconds: 300
+    command: |
+      set -euo pipefail
+      cd "${OCI_PRIMARY_SOURCE_DIR}"
+      OCI_ENTRYPOINT="$(command -v oci)"
+      OCI_PYTHON="$(head -n 1 "$OCI_ENTRYPOINT")"
+      OCI_PYTHON="${OCI_PYTHON#\#!}"
+      if [ -x "$OCI_PYTHON" ]; then "$OCI_PYTHON" ci/resolve.py; else python3 ci/resolve.py; fi
+      source .release/export.sh
+outputArtifacts:
+  - name: verified-release-manifest
+    type: BINARY
+    location: .release/release.json

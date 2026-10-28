@@ -1,0 +1,4 @@
+import /etc/caddy/Caddyfile.base
+http://{$LASTTABLE_SITE}:8080 {
+ redir https://{$LASTTABLE_SITE}{uri} permanent
+}

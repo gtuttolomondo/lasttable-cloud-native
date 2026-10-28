@@ -1,0 +1,8 @@
+oci==2.187.0
+oracledb==3.4.0
+confluent-kafka==2.11.1
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.1
+email-validator==2.3.0
+httpx==0.28.1

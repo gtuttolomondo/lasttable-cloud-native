@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lasttable-verification
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: network-smoke
+  namespace: lasttable-verification
+spec:
+  completions: 2
+  parallelism: 2
+  backoffLimit: 0
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        app: lasttable-network-smoke
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      nodeSelector:
+        workload: lasttable
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: lasttable-network-smoke
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: probe
+          image: docker.io/library/alpine:3.22
+          command:
+            - sh
+            - -ec
+            - |
+              echo "Node: $NODE_NAME"
+              nslookup kubernetes.default.svc.cluster.local
+              nslookup lin.ocir.io
+              nc -z -w 10 lin.ocir.io 443
+              nc -z -w 10 secrets.vaults.eu-milan-1.oci.oraclecloud.com 443
+              echo NETWORK_SMOKE_PASSED
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

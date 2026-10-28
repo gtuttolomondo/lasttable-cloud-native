@@ -1,0 +1,37 @@
+version: 0.1
+component: build
+timeoutInSeconds: 3600
+shell: bash
+failImmediatelyOnError: true
+env:
+  exportedVariables:
+    - RELEASE
+    - BACKEND_IMAGE_TAG
+    - FRONTEND_IMAGE_TAG
+    - NOTIFICATIONS_IMAGE_TAG
+steps:
+  - type: Command
+    name: Build and test release images
+    timeoutInSeconds: 3300
+    command: |
+      set -euo pipefail
+      cd "${OCI_PRIMARY_SOURCE_DIR}"
+      OCI_ENTRYPOINT="$(command -v oci)"
+      OCI_PYTHON="$(head -n 1 "$OCI_ENTRYPOINT")"
+      OCI_PYTHON="${OCI_PYTHON#\#!}"
+      if [ -x "$OCI_PYTHON" ]; then "$OCI_PYTHON" ci/identity.py; else python3 ci/identity.py; fi
+      python3 ci/build.py
+      source .release/export.sh
+outputArtifacts:
+  - name: release-manifest
+    type: BINARY
+    location: .release/release.json
+  - name: backend-image
+    type: DOCKER_IMAGE
+    location: ${BACKEND_IMAGE_TAG}
+  - name: frontend-image
+    type: DOCKER_IMAGE
+    location: ${FRONTEND_IMAGE_TAG}
+  - name: notifications-image
+    type: DOCKER_IMAGE
+    location: ${NOTIFICATIONS_IMAGE_TAG}

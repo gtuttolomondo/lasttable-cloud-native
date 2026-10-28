@@ -1,0 +1,96 @@
+schemaVersion: 1.1.0
+version: "20261028"
+locale: en
+title: LastTable — From Code to Cloud
+stackDescription: Infrastructure for the LastTable interactive OCI demonstration.
+description: Cumulative, verified stages for networking, security, OKE, data, delivery and application deployment.
+variableGroups:
+  - title: Deployment
+    variables: [table_admin_secret_name, registry_host, initial_backend_image, initial_frontend_image, demo_domain, smtp_user_ocid, notification_image, notification_image_digest, tenancy_ocid, compartment_ocid, region, project_name, vcn_cidr, deployment_stage, admin_client_cidrs, kubernetes_version, node_shape, node_count, node_ocpus, node_memory_gbs, node_image_name, kafka_version, kafka_broker_shape, kafka_broker_ocpus, kafka_storage_gbs]
+variables:
+  table_admin_secret_name:
+    type: string
+    title: Existing Kubernetes administration Secret name
+  registry_host:
+    type: string
+    title: Regional OCIR hostname
+  initial_backend_image:
+    type: string
+    title: Tested backend image digest reference
+  initial_frontend_image:
+    type: string
+    title: Tested frontend image digest reference
+  demo_domain:
+    type: string
+    title: Registered demo domain
+  smtp_user_ocid:
+    type: string
+    title: Existing SMTP user OCID (delivery stage)
+  notification_image:
+    type: string
+    title: Tested OCIR notification image URI
+  notification_image_digest:
+    type: string
+    title: Authoritative notification image digest
+  tenancy_ocid:
+    type: string
+    visible: false
+  compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Demo compartment
+    required: true
+  region:
+    type: oci:identity:region:name
+    title: Deployment region
+    required: true
+  project_name:
+    type: string
+    title: Resource name prefix
+    required: true
+  vcn_cidr:
+    type: string
+    title: Dedicated VCN IPv4 /16 CIDR
+    required: true
+  deployment_stage:
+    type: enum
+    title: Cumulative deployment stage
+    enum: [network, security, platform, data, delivery, application]
+  admin_client_cidrs:
+    type: array
+    items:
+      type: string
+    title: Bastion client IPv4 /32 addresses
+  kubernetes_version:
+    type: string
+    title: Kubernetes version
+  node_shape:
+    type: string
+    title: Managed node shape
+  node_count:
+    type: integer
+    title: Managed node count
+  node_ocpus:
+    type: number
+    title: OCPUs per managed node
+  node_memory_gbs:
+    type: number
+    title: RAM per node (GB)
+  node_image_name:
+    type: string
+    title: Pinned OKE image name
+  kafka_version:
+    type: string
+    title: Apache Kafka version
+  kafka_broker_shape:
+    type: string
+    title: Kafka broker shape
+  kafka_broker_ocpus:
+    type: number
+    title: Kafka OCPUs per broker
+  kafka_storage_gbs:
+    type: number
+    title: Kafka storage per broker (GB)
+outputs:
+  network:
+    type: string
+    title: Network identifiers

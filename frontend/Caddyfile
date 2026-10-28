@@ -1,0 +1,25 @@
+{
+ admin off
+ http_port 8080
+ https_port 8443
+ auto_https disable_redirects
+}
+{$LASTTABLE_SITE:localhost} {
+ root * /srv
+ encode zstd gzip
+ header {
+  X-Content-Type-Options nosniff
+  Referrer-Policy no-referrer
+  X-Frame-Options DENY
+  Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  -Server
+ }
+ handle /api/* {
+  reverse_proxy {$LASTTABLE_API:backend:8000}
+ }
+ handle {
+  try_files {path} /index.html
+  file_server
+ }
+}

@@ -189,6 +189,7 @@ def observer():
     probe = Consumer({**settings, 'group.id':'lasttable-observer', 'enable.auto.commit':False})
     previous_topics = {}
     topic_refresh = 0
+    last_purge = 0
     try:
         while not STOP:
             snapshot, topics, group_states = {}, {}, {}
@@ -245,6 +246,9 @@ def observer():
                 inventory = {'brokers':len(metadata.brokers),'observed_topics':sum(t['available'] for t in topics.values()),
                     'partitions':sum(len(t['partitions']) for t in topics.values()),'groups':group_states}
                 log(db,event,'observer','kafka.inventory.snapshot',detail=json.dumps(inventory,separators=(',',':')))
+                if time.monotonic()-last_purge >= 600:
+                    execute(db, 'BEGIN LT_OWNER.purge_telemetry; END;')
+                    last_purge = time.monotonic()
                 db.commit()
             time.sleep(10)
     finally:

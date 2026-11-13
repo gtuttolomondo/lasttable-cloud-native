@@ -54,7 +54,7 @@ def initialize_database():
                     cursor.execute(f'CREATE USER "{name}" IDENTIFIED BY "{password}"')
                 cursor.execute(f'GRANT CREATE SESSION TO "{name}"')
             cursor.execute('GRANT CREATE TABLE, CREATE VIEW, CREATE SEQUENCE TO LT_OWNER')
-            cursor.execute('ALTER USER LT_OWNER QUOTA 100M ON DATA')
+            cursor.execute('ALTER USER LT_OWNER QUOTA 1G ON DATA')
     ddl=Path('/bootstrap/schema.sql').read_text()
     checksum=hashlib.sha256(ddl.encode()).hexdigest()
     with connect('LT_OWNER',passwords['owner']) as owner:
@@ -153,6 +153,8 @@ if __name__=='__main__':
         initialize_database()
         from migrate_admin import migrate
         migrate()
+        from migrate_observability_storage import migrate as migrate_storage
+        migrate_storage()
     if not args.database_only:
         from verify_kafka import initialize_kafka
         initialize_kafka(CONFIG,secret)

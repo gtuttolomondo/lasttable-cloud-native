@@ -1,5 +1,6 @@
 import hmac
 import json
+import logging
 import os
 import re
 import time
@@ -10,6 +11,7 @@ from typing import Literal
 
 import oracledb
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from .events import insert_outbox, new_event
@@ -19,6 +21,14 @@ from .runtime import config, current_session, database, execute, log, one, rows,
 app = FastAPI(title='LastTable', docs_url=None, redoc_url=None, openapi_url=None)
 RATE = defaultdict(deque)
 AUTH_RATE = defaultdict(deque)
+
+
+@app.exception_handler(oracledb.DatabaseError)
+async def database_unavailable(request: Request, error: oracledb.DatabaseError):
+    code=getattr(error.args[0], 'code', None) if error.args else None
+    logging.getLogger(__name__).error('Database operation unavailable (Oracle code=%s)', code)
+    return JSONResponse(status_code=503, headers={'Retry-After':'30'}, content={
+        'detail':'Al momento il servizio non riesce a completare la richiesta. Riprova tra qualche minuto.'})
 
 
 @app.middleware('http')

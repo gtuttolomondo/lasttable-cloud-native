@@ -90,3 +90,16 @@ Session counts come from the Oracle outbox, processed-events and delivery ledger
 The observer uses existing DESCRIBE permissions only, sampling about every ten seconds. Compact snapshot records fit the existing 400-character diagnostic column. Topic snapshots are persisted on change and periodically refreshed, reducing repeated metadata writes. The API returns up to 120 lag snapshots and 15 one-minute buckets for publications/SMTP acceptances. No infrastructure recreation, schema migration or Kafka ACL expansion is required. Consumer/Function redeliveries that create no new effect are logged for the new deduplication counter.
 
 `scripts/observability_probe.py` checks actual Oracle queries and Kafka observations read-only from existing pod identities before a release; `app/tests/test_observability.py` covers scope, privacy, timing and partition-local lag.
+
+## Bounded telemetry storage
+
+Schema migration 3 (`bootstrap/migrate_observability_storage.py`) raises only the
+LT_OWNER DATA quota from 100 MB to 1 GB within the existing 20 GB database. It
+installs `purge_telemetry`, callable by LT_WORKER without a general DELETE grant.
+The observer calls it every ten minutes: only Kafka technical snapshots older
+than 24 hours are removed, preserving the latest sample for every session/action/topic.
+Bookings, outbox events, notification deliveries and business event logs are kept.
+The sampling frequency remains unchanged. New environments apply migration 3
+after migrations 1 and 2. Existing environments run `scripts/storage_migration.py`
+(`--check` for read-only diagnostics, `--probe` for a rolled-back retention test).
+Database failures return retryable JSON HTTP 503 responses without internal details.

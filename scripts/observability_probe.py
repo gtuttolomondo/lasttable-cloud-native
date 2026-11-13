@@ -33,7 +33,7 @@ from contextlib import contextmanager
 @contextmanager
 def fake_database(*args):yield None
 captured=[]
-w.database=fake_database;w.heartbeat=lambda *args:None;w.current_session=lambda db:{'session_id':'read-only-probe'}
+w.database=fake_database;w.heartbeat=lambda *args:None;w.execute=lambda *args,**kwargs:None;w.current_session=lambda db:{'session_id':'read-only-probe'}
 w.log=lambda db,event,component,action,**kw:captured.append((action,kw))
 class Session:
  def commit(self):pass

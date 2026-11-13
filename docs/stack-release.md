@@ -32,8 +32,8 @@ local mounts and build caches are excluded.
    For a new environment, provision a Secret with key `code` privately before the
    API deployment. `scripts/admin_release.py` supports the existing demo's private
    operator setup. Never commit the actual code or add it to Resource Manager variables.
-6. Check migration 2 with `scripts/admin_migration.py` (requires the existing bootstrap
-   configuration/image and private cluster access). Migration 1 and migration 2 are
+6. Check migrations 2 and 3 with `scripts/admin_migration.py` and `scripts/storage_migration.py` (requires the existing bootstrap
+   configuration/image and private cluster access). Applied migrations are
    immutable and do not drop bookings or recreate tables.
 7. Push reviewed source with `scripts/source_export.py push`, build/test the containers,
    publish immutable OCIR images and run `scripts/deployment.py start` with the release
@@ -43,7 +43,7 @@ local mounts and build caches are excluded.
 
 Provision the cumulative Terraform stages described in `infra/README.md`. Run the
 versioned private database/Kafka bootstrap before the first application deployment.
-`bootstrap/verify_data.py` applies both schema migrations in order. Build and publish
+`bootstrap/verify_data.py` applies all three schema migrations in order. Build and publish
 images in your own private OCIR namespace, supply image references and provision the administration Secret privately, install the foundation and run the DevOps deploy pipeline. This package
 contains all source but is not a single Terraform Apply that builds containers or
 initializes SQL/Kafka automatically.

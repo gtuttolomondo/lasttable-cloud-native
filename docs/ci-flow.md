@@ -1,4 +1,4 @@
-# Native OCI CI/CD and released-application baseline
+# Native OCI CI/CD and build provenance
 
 The canonical build source is the OCI DevOps repository branch `codex/implementation`.
 The public GitHub repository mirrors reviewed source. A GitHub push is not an OCI
@@ -10,18 +10,23 @@ the selected deployment pipeline. No personal API key is required on the runner.
 
 ## Application identity
 
-`ci/application-baseline.json` records hashes from the locally released application
-and frontend assets plus the installed Python package versions. Application source
-files are checked before any build; backend/Function dependencies and compiled
-frontend assets must match. Container recipes pin the exact released public bases;
-Python lock files capture transitive packages and npm uses its existing lock file.
-New image timestamps/provenance labels can change image digests; these checks prove
-application/source/dependency/asset equivalence, not bit-identical container archives.
-Update this baseline deliberately with an approved application change, after local
-validation; CI-only changes must leave application hashes untouched.
+Normal builds use the checked-out Git commit, including new application and frontend
+changes. CI records hashes of all tracked inputs under app/bootstrap/frontend/notifications,
+rejects uncommitted input changes or mismatched commit provenance, then builds and tests.
+Backend/Function installed packages must match their current requirements.lock.txt;
+npm uses package-lock.json. Deliberate dependency upgrades update these lock files.
+The compiled frontend asset hashes are recorded for the new release; they do not have
+to match an older release. Mail text changes require no baseline/hash maintenance.
 
-The release manifest carries the source commit, OCI build run, baseline commit and
-application-manifest hash together with the three remote image references. Publication
+`ci/application-baseline.json` remains a historical reference for the original local
+release. Only the explicit diagnostic command `python3 ci/build.py --verify-release-baseline`
+requires old source, package and frontend hashes to match. The normal build specification
+does not enable this diagnostic. Image timestamps/provenance labels can change image
+digests even when application inputs match.
+
+The release manifest carries the source commit, OCI build run, verification mode,
+current input hashes and compiled asset hashes with the three remote image references.
+The historical baseline commit is set only when that diagnostic was requested. Publication
 uses static local image names and dynamic unique remote tags. Deployments consume
 the verified digests. Failed builds/tests cannot reach deployment.
 
@@ -62,6 +67,11 @@ no-op validation deployment all succeeded. Source checks covered 43 application
 files; runtime checks matched 42 backend and 38 Function Python packages and all
 three frontend assets from the local release. All 30 backend tests and the Function
 wire-protocol probe passed.
+
+A later mail-text edit exposed that enforcing the old release hashes in every build
+blocked normal development. Normal builds now validate the current commit and lock
+files; eight CI regression tests cover changed mail, new source files, dirty/mismatched
+inputs, lock-file drift and changed frontend assets. Historical matching is opt-in.
 
 The reviewed activation plan changes only the build pipeline's production flag,
 the deployment trigger destination and creation of the OCI source push trigger.

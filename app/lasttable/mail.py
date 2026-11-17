@@ -9,7 +9,7 @@ def booking_message(recipient, event, sender):
     state = event['state']
     copy = {
         'PENDING': ('PRESA IN CARICO', 'Richiesta ricevuta.', 'presa in carico, in attesa di conferma',
-            'La tua richiesta è stata presa in carico dal ristorante ed è in attesa di conferma.',
+            'Abbiamo ricevuto la tua richiesta. Ora attendiamo la conferma del ristorante.',
             'Il tavolo non è ancora confermato. Ti invieremo una seconda email quando il ristorante avrà confermato o rifiutato la richiesta.', '#d9e9a8', '#183d34'),
         'CONFIRMED': ('PRENOTAZIONE CONFERMATA', 'Il tuo tavolo ti aspetta.', 'confermata',
             'Il ristorante ha confermato la tua prenotazione. Ecco tutti i dettagli della tua serata.',

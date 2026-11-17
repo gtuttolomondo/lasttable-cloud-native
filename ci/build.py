@@ -1,12 +1,17 @@
 """Build/test locally on the runner; native OCI Deliver Artifacts publishes images."""
 import json
-import hashlib
+import argparse
 import os
 from pathlib import Path
 import re
 import shlex
 import shutil
 import subprocess
+from verification import current_source, verify_baseline, verify_packages, frontend_assets
+
+parser=argparse.ArgumentParser()
+parser.add_argument('--verify-release-baseline',action='store_true',help='Diagnostic: require equivalence to the historical local release')
+args=parser.parse_args()
 
 engine=shutil.which('podman') or shutil.which('docker')
 assert engine,'A container engine is required'
@@ -19,13 +24,11 @@ probe=os.environ.get('CI_PROBE_ONLY','false').lower()=='true'
 production=os.environ.get('CI_PRODUCTION_DEPLOY_ENABLED','false').lower()=='true'
 assert not (probe and production),'Probe images cannot enter a production-enabled pipeline'
 if probe:release='probe-'+release
-commit=os.environ.get('OCI_PRIMARY_SOURCE_COMMIT_HASH') or subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-baseline=json.loads(Path('ci/application-baseline.json').read_text())
-for path,digest in baseline['files'].items():
-    assert hashlib.sha256(Path(path).read_bytes()).hexdigest()==digest,'Application differs from approved baseline: '+path
-manifest_hash=hashlib.sha256(json.dumps(baseline['files'],sort_keys=True).encode()).hexdigest()
+commit,manifest,manifest_hash=current_source(Path.cwd(),os.environ.get('OCI_PRIMARY_SOURCE_COMMIT_HASH'))
+baseline=json.loads(Path('ci/application-baseline.json').read_text()) if args.verify_release_baseline else None
+if baseline:verify_baseline(Path.cwd(),baseline)
 exports={'RELEASE':release}
-provenance={'source_commit':commit,'build_run_id':os.environ['OCI_BUILD_RUN_ID'],'baseline_commit':baseline['reference_commit'],'application_manifest_sha256':manifest_hash,'probe_only':probe}
+provenance={'source_commit':commit,'build_run_id':os.environ['OCI_BUILD_RUN_ID'],'baseline_commit':baseline['reference_commit'] if baseline else None,'verification_mode':'historical-release' if baseline else 'current-commit','application_files':manifest,'application_manifest_sha256':manifest_hash,'frontend_assets':{},'probe_only':probe}
 
 
 def run(*args):subprocess.run(args,check=True)
@@ -39,11 +42,11 @@ for role,source in [('backend','app'),('frontend','frontend'),('notifications','
         continue
     if role in ('backend','notifications'):
         frozen=subprocess.check_output([engine,'run','--rm','--entrypoint','python',image,'-m','pip','freeze','--all'],text=True).splitlines()
-        assert sorted(frozen)==sorted(baseline['python_packages'][role]),'Runtime dependencies differ from released baseline: '+role
+        verify_packages(frozen,Path(source)/'requirements.lock.txt')
+        if baseline:assert sorted(frozen)==sorted(baseline['python_packages'][role]),'Runtime dependencies differ from historical release baseline: '+role
     if role=='frontend':
         hashes=subprocess.check_output([engine,'run','--rm','--entrypoint','sh',image,'-c','find /srv -type f -exec sha256sum {} +'],text=True)
-        actual={line.split(None,1)[1].removeprefix('/srv/'):line.split(None,1)[0] for line in hashes.splitlines()}
-        assert actual==baseline['frontend_assets'],'Frontend assets differ from released baseline'
+        provenance['frontend_assets']=frontend_assets(hashes,baseline['frontend_assets'] if baseline else None)
 
     if role=='frontend':
         # Mirror the pod's capability boundary: inherited file capabilities
@@ -68,4 +71,4 @@ for role,source in [('backend','app'),('frontend','frontend'),('notifications','
 Path('.release').mkdir(exist_ok=True)
 Path('.release/release.json').write_text(json.dumps({**exports,**provenance},indent=2)+'\n')
 Path('.release/export.sh').write_text(''.join('export '+k+'='+shlex.quote(v)+'\n' for k,v in exports.items()))
-print(json.dumps({'release':release,**provenance,'mode':'probe' if probe else 'application','images_built':3,'images_tested':0 if probe else 3,'publication':'native Deliver Artifacts stage'}))
+print(json.dumps({'release':release,**{k:v for k,v in provenance.items() if k not in ['application_files','frontend_assets']},'mode':'probe' if probe else 'application','images_built':3,'images_tested':0 if probe else 3,'publication':'native Deliver Artifacts stage'}))

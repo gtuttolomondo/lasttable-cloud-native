@@ -49,7 +49,7 @@ Do not run local publishers/consumers against the same database while cloud work
 
 Verification on 2026-10-27: real DevOps deployments, version recovery, public HTTPS/mobile UI, an authorized mailbox delivery, 30 concurrent idempotent retries, Kafka redelivery, malformed-event DLQs and isolated replay passed. A separate environment was recreated and exercised end to end with notifications paused and zero SMTP attempts, then its 135 resources were destroyed through Resource Manager with explicit approval; its Vault remains scheduled for deletion under OCI retention.
 
-The reviewed source is public at [lasttable-cloud-native](https://github.com/gtuttolomondo/lasttable-cloud-native). OCI DevOps is the canonical build source; GitHub is a mirror. The November CI repair pins the locally released bases and installed dependencies and checks source, frontend assets, 30 backend tests and the Function protocol. See [CI validation and release boundaries](docs/ci-flow.md) for the registry policy and production routing controls.
+The reviewed source is public at [lasttable-cloud-native](https://github.com/gtuttolomondo/lasttable-cloud-native). OCI DevOps is the canonical build source; GitHub is a mirror. CI builds the current commit, pins container bases and dependencies through lock files, records source/frontend asset hashes, and runs CI regression tests, 30 backend tests and the Function protocol probe. Historical local-release equivalence is an opt-in diagnostic, so normal application edits can build without updating a baseline. See [CI validation and release boundaries](docs/ci-flow.md) for the registry policy and production routing controls.
 
 ## Credentials and release boundaries
 

@@ -20,6 +20,7 @@ steps:
       OCI_PYTHON="$(head -n 1 "$OCI_ENTRYPOINT")"
       OCI_PYTHON="${OCI_PYTHON#\#!}"
       if [ -x "$OCI_PYTHON" ]; then "$OCI_PYTHON" ci/identity.py; else python3 ci/identity.py; fi
+      python3 -m unittest discover -s ci/tests -p 'test_*.py'
       python3 ci/build.py
       source .release/export.sh
 outputArtifacts:

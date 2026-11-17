@@ -27,6 +27,6 @@ for role in ['backend','frontend','notifications']:
     if role=='notifications':
         exports['FUNCTION_IMAGE']=tag;exports['FUNCTION_DIGEST']=actual.digest
     else:exports[role.upper()+'_IMAGE']=tag.rsplit(':',1)[0]+'@'+actual.digest
-Path('.release/release.json').write_text(json.dumps({**exports,**{k:built[k] for k in ['source_commit','build_run_id','baseline_commit','application_manifest_sha256','probe_only']}},indent=2)+'\n')
+Path('.release/release.json').write_text(json.dumps({**exports,**{k:built[k] for k in ['source_commit','build_run_id','baseline_commit','verification_mode','application_files','application_manifest_sha256','frontend_assets','probe_only']}},indent=2)+'\n')
 Path('.release/export.sh').write_text(''.join('export '+k+'='+shlex.quote(v)+'\n' for k,v in exports.items()))
 print(json.dumps({'release':exports['RELEASE'],'authoritative_ocir_digests':'verified','private_images':3}))

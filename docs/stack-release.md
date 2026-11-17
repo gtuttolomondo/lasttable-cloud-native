@@ -58,8 +58,9 @@ package integrity/private-value scan (`scripts/release_check.py`). Existing test
 cover manual approval, duplicate protection, HTML escaping, receipts, public data
 projection and partition-local lag. Runtime SQL/Kafka probes use existing identities.
 
-The CI baseline records the locally released application. Native build inputs are
-pinned and checked against it before deployment. OCIR upload requires the build
+The historical CI baseline records the locally released application for an optional
+diagnostic comparison. Normal CI builds the current Git commit, verifies its lock files,
+tests the images and records source/asset hashes for that new release. OCIR upload requires the build
 dynamic group's scoped READ/UPDATE/CREATE grant in this environment; metadata UPDATE
 alone did not prove Docker upload permission. Keep initial production routing disabled
 until the complete native publication and digest-resolution path has passed.

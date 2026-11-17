@@ -35,9 +35,11 @@ local mounts and build caches are excluded.
 6. Check migrations 2 and 3 with `scripts/admin_migration.py` and `scripts/storage_migration.py` (requires the existing bootstrap
    configuration/image and private cluster access). Applied migrations are
    immutable and do not drop bookings or recreate tables.
-7. Push reviewed source with `scripts/source_export.py push`, build/test the containers,
-   publish immutable OCIR images and run `scripts/deployment.py start` with the release
-   image file. The cluster is reused. Check DevOps completion and application behavior.
+7. Validate the native OCI pipeline with production routing disabled as described in
+   [ci-flow.md](ci-flow.md). Then enable production routing and the source push trigger
+   through a reviewed Terraform plan. Push reviewed source with `scripts/source_export.py push`;
+   CI builds/tests, publishes immutable OCIR images and triggers the existing deploy pipeline.
+   The cluster is reused. Check build and deploy completion and application behavior.
 
 ## Fresh environment
 
@@ -56,7 +58,8 @@ package integrity/private-value scan (`scripts/release_check.py`). Existing test
 cover manual approval, duplicate protection, HTML escaping, receipts, public data
 projection and partition-local lag. Runtime SQL/Kafka probes use existing identities.
 
-OCI managed-build image publication currently fails with OCIR HTTP 403 in the demo
-tenancy. Local tested builds plus OCIR publish and the OCI DevOps deploy pipeline
-are the verified release route. The package preserves the native build definition
-without claiming that unresolved IAM/registry issue is fixed.
+The CI baseline records the locally released application. Native build inputs are
+pinned and checked against it before deployment. OCIR upload requires the build
+dynamic group's scoped READ/UPDATE/CREATE grant in this environment; metadata UPDATE
+alone did not prove Docker upload permission. Keep initial production routing disabled
+until the complete native publication and digest-resolution path has passed.

@@ -54,6 +54,7 @@ resource "oci_devops_deploy_pipeline" "demo" {
   count        = local.stage_rank >= 5 ? 1 : 0
   project_id   = oci_devops_project.demo[0].id
   display_name = "${var.project_name}-release"
+  description  = "Deploy verified LastTable release images to the existing application"
   deploy_pipeline_parameters {
     dynamic "items" {
       for_each = { BACKEND_IMAGE = var.initial_backend_image, FRONTEND_IMAGE = var.initial_frontend_image, FUNCTION_IMAGE = var.notification_image, FUNCTION_DIGEST = var.notification_image_digest, RELEASE = "initial" }
@@ -69,9 +70,10 @@ resource "oci_devops_build_pipeline" "demo" {
   count        = local.stage_rank >= 5 ? 1 : 0
   project_id   = oci_devops_project.demo[0].id
   display_name = "${var.project_name}-build"
+  description  = "Build and test the approved LastTable application, then publish immutable images"
   build_pipeline_parameters {
     dynamic "items" {
-      for_each = { REGISTRY_HOST = var.registry_host, REGISTRY_NAMESPACE = data.oci_objectstorage_namespace.demo[0].namespace, COMPARTMENT_OCID = var.compartment_ocid, PROJECT_NAME = var.project_name, RELEASE_LABEL = "v1" }
+      for_each = { REGISTRY_HOST = var.registry_host, REGISTRY_NAMESPACE = data.oci_objectstorage_namespace.demo[0].namespace, COMPARTMENT_OCID = var.compartment_ocid, PROJECT_NAME = var.project_name, RELEASE_LABEL = "v1", CI_PROBE_ONLY = "false", CI_PRODUCTION_DEPLOY_ENABLED = tostring(var.ci_production_deploy_enabled) }
       content {
         name          = items.key
         default_value = items.value
@@ -108,7 +110,7 @@ resource "oci_identity_policy" "build" {
   description    = "Exact managed build pipeline identity in the demo compartment"
   statements = concat(
     [for grant in ["read repos", "manage devops-family", "use subnets", "use vnics", "use network-security-groups", "use ons-topics"] : "Allow ${local.build_subject} to ${grant} in compartment id ${var.compartment_ocid}"],
-    ["Allow any-user to manage repos in compartment id ${var.compartment_ocid} where all {any {request.principal.id='${oci_devops_build_pipeline.demo[0].id}', request.user.id='${oci_devops_build_pipeline.demo[0].id}'}, any {request.permission='REPOSITORY_READ', request.permission='REPOSITORY_UPDATE'}}"]
+    ["Allow ${local.build_subject} to manage repos in compartment id ${var.compartment_ocid} where all {any {target.repo.name='${var.project_name}/backend', target.repo.name='${var.project_name}/frontend', target.repo.name='${var.project_name}/notifications'}, any {request.permission='REPOSITORY_READ', request.permission='REPOSITORY_UPDATE', request.permission='REPOSITORY_CREATE'}}"]
   )
   freeform_tags = local.tags
 }
@@ -247,7 +249,7 @@ resource "oci_devops_build_pipeline_stage" "trigger" {
   build_pipeline_id              = oci_devops_build_pipeline.demo[0].id
   display_name                   = "Deploy verified release"
   build_pipeline_stage_type      = "TRIGGER_DEPLOYMENT_PIPELINE"
-  deploy_pipeline_id             = oci_devops_deploy_pipeline.demo[0].id
+  deploy_pipeline_id             = var.ci_production_deploy_enabled ? oci_devops_deploy_pipeline.demo[0].id : oci_devops_deploy_pipeline.ci_validation[0].id
   is_pass_all_parameters_enabled = true
   build_pipeline_stage_predecessor_collection {
     items { id = oci_devops_build_pipeline_stage.resolve[0].id }
@@ -319,6 +321,59 @@ resource "oci_devops_build_pipeline_stage" "resolve" {
   }
   build_pipeline_stage_predecessor_collection {
     items { id = oci_devops_build_pipeline_stage.deliver[0].id }
+  }
+  freeform_tags = local.tags
+}
+
+variable "ci_production_deploy_enabled" {
+  description = "Enable automatic production deployment only after native CI validation. False routes to a no-op validation pipeline."
+  type        = bool
+  default     = false
+}
+resource "oci_devops_deploy_pipeline" "ci_validation" {
+  count         = local.stage_rank >= 5 ? 1 : 0
+  project_id    = oci_devops_project.demo[0].id
+  display_name  = "${var.project_name}-ci-validation-only"
+  description   = "No workload deployment: verifies the build-to-deployment trigger without touching production."
+  freeform_tags = local.tags
+}
+resource "oci_devops_deploy_stage" "ci_validation" {
+  count              = local.stage_rank >= 5 ? 1 : 0
+  deploy_pipeline_id = oci_devops_deploy_pipeline.ci_validation[0].id
+  display_name       = "CI validation complete - no application changes"
+  deploy_stage_type  = "WAIT"
+  wait_criteria {
+    wait_type     = "ABSOLUTE_WAIT"
+    wait_duration = "PT5S"
+  }
+  deploy_stage_predecessor_collection {
+    items { id = oci_devops_deploy_pipeline.ci_validation[0].id }
+  }
+  freeform_tags = local.tags
+}
+
+variable "ci_push_trigger_enabled" {
+  description = "Start the verified CI pipeline automatically on pushes to the OCI source branch."
+  type        = bool
+  default     = false
+}
+resource "oci_devops_trigger" "source_push" {
+  count          = local.stage_rank >= 5 && var.ci_push_trigger_enabled ? 1 : 0
+  project_id     = oci_devops_project.demo[0].id
+  display_name   = "${var.project_name}-source-push"
+  description    = "Build the exact pushed commit on the application source branch"
+  trigger_source = "DEVOPS_CODE_REPOSITORY"
+  repository_id  = oci_devops_repository.source[0].id
+  actions {
+    type              = "TRIGGER_BUILD_PIPELINE"
+    build_pipeline_id = oci_devops_build_pipeline.demo[0].id
+    filter {
+      trigger_source = "DEVOPS_CODE_REPOSITORY"
+      events         = ["PUSH"]
+      include {
+        head_ref = "codex/implementation"
+      }
+    }
   }
   freeform_tags = local.tags
 }

@@ -28,10 +28,10 @@ outputArtifacts:
     location: .release/release.json
   - name: backend-image
     type: DOCKER_IMAGE
-    location: ${BACKEND_IMAGE_TAG}
+    location: localhost/lasttable-backend:ci
   - name: frontend-image
     type: DOCKER_IMAGE
-    location: ${FRONTEND_IMAGE_TAG}
+    location: localhost/lasttable-frontend:ci
   - name: notifications-image
     type: DOCKER_IMAGE
-    location: ${NOTIFICATIONS_IMAGE_TAG}
+    location: localhost/lasttable-notifications:ci

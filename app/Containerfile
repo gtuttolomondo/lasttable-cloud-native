@@ -1,7 +1,7 @@
-FROM python:3.12-slim-bookworm
+FROM docker.io/library/python@sha256:0f086103b026048cc50cb5da25ec435c023c5241a83fc44daea593377abc61c4
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
-COPY app/requirements.txt .
+COPY app/requirements.lock.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/app
 COPY app/lasttable/ lasttable/

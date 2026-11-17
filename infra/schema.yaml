@@ -6,8 +6,16 @@ stackDescription: Infrastructure for the LastTable interactive OCI demonstration
 description: Cumulative, verified stages for networking, security, OKE, data, delivery and application deployment.
 variableGroups:
   - title: Deployment
-    variables: [table_admin_secret_name, registry_host, initial_backend_image, initial_frontend_image, demo_domain, smtp_user_ocid, notification_image, notification_image_digest, tenancy_ocid, compartment_ocid, region, project_name, vcn_cidr, deployment_stage, admin_client_cidrs, kubernetes_version, node_shape, node_count, node_ocpus, node_memory_gbs, node_image_name, kafka_version, kafka_broker_shape, kafka_broker_ocpus, kafka_storage_gbs]
+    variables: [ci_push_trigger_enabled, ci_production_deploy_enabled, table_admin_secret_name, registry_host, initial_backend_image, initial_frontend_image, demo_domain, smtp_user_ocid, notification_image, notification_image_digest, tenancy_ocid, compartment_ocid, region, project_name, vcn_cidr, deployment_stage, admin_client_cidrs, kubernetes_version, node_shape, node_count, node_ocpus, node_memory_gbs, node_image_name, kafka_version, kafka_broker_shape, kafka_broker_ocpus, kafka_storage_gbs]
 variables:
+  ci_push_trigger_enabled:
+    type: boolean
+    title: Enable OCI source push trigger after validation
+    default: false
+  ci_production_deploy_enabled:
+    type: boolean
+    title: Enable CI automatic production deployment after validation
+    default: false
   table_admin_secret_name:
     type: string
     title: Existing Kubernetes administration Secret name

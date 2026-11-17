@@ -1,11 +1,11 @@
-FROM node:24-alpine AS build
+FROM docker.io/library/node@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY frontend/index.html frontend/vite.config.js ./
 COPY frontend/src/ src/
 RUN npm run build
-FROM caddy:2.11.7-alpine
+FROM docker.io/library/caddy@sha256:04913b1da43339a40ad1ea87827d70a576ac5aa6cf674c6e24fdca675887533a
 COPY --from=build /build/dist/ /srv/
 COPY frontend/Caddyfile /etc/caddy/Caddyfile.base
 COPY frontend/Caddyfile.https /etc/caddy/Caddyfile.https

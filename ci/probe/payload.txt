@@ -1,0 +1,1 @@
+LastTable CI native publication probe. Not an application image.

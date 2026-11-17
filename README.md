@@ -35,7 +35,7 @@ Use one Resource Manager stack throughout. The stages are cumulative: `network`,
 3. Build and test images locally with Podman for `linux/amd64`, publish privately to OCIR and record authoritative digests. Supply those image references to the delivery/application stages.
 4. Delegate the registered domain to the new OCI DNS zone; verify DKIM, SPF and approved sender readiness. Verify Function database/SMTP authentication without sending mail.
 5. Install the operator foundation with `scripts/registry_foundation.py`. It installs runtime service accounts, configuration, a registry credential refresher and the deployment pipeline's minimal namespace Role. The deployment identity can release application Deployments, Services and the certificate PVC; it cannot read secrets or change RBAC. Run the initial registry refresh before deploying private images.
-6. Push the allowlisted source into the temporary private OCI repository with `scripts/source_export.py push`. Run the OCI DevOps build pipeline. It builds and tests three images, publishes them through native Deliver Artifacts, verifies their OCIR digests and passes those digests to the deployment pipeline.
+6. Push the allowlisted source into the private OCI repository with `scripts/source_export.py push`. OCI DevOps builds and tests three images, publishes them through native Deliver Artifacts, verifies their OCIR digests and passes those digests to the selected deployment pipeline. Validate with production routing disabled before enabling the source push trigger; see [native CI and application equivalence](docs/ci-flow.md).
 7. DevOps releases the Function and applies the OKE manifests through the private deployment environment. Caddy obtains a certificate after DNS and the public load balancer are ready.
 8. Verify one authorized real email separately from SMTP acceptance, then rehearse duplicate events, consumer pause/resume and isolated replay.
 
@@ -47,7 +47,9 @@ Contract tests run inside the built backend image. Local integration tests use K
 
 Do not run local publishers/consumers against the same database while cloud workers are active: they would compete for the same outbox and send events to different brokers.
 
-Verification on 2026-10-27: real DevOps deployments, version recovery, public HTTPS/mobile UI, an authorized mailbox delivery, 30 concurrent idempotent retries, Kafka redelivery, malformed-event DLQs and isolated replay passed. A separate environment was recreated and exercised end to end with notifications paused and zero SMTP attempts, then its 135 resources were destroyed through Resource Manager with explicit approval; its Vault remains scheduled for deletion under OCI retention. Managed CI publication is still under investigation: OCIR denied writes both with repository-name filters and with compartment-wide READ/UPDATE permissions. The approved policy now matches the exact build pipeline identity in either principal context; live verification is pending. No public GitHub repository has been published.
+Verification on 2026-10-27: real DevOps deployments, version recovery, public HTTPS/mobile UI, an authorized mailbox delivery, 30 concurrent idempotent retries, Kafka redelivery, malformed-event DLQs and isolated replay passed. A separate environment was recreated and exercised end to end with notifications paused and zero SMTP attempts, then its 135 resources were destroyed through Resource Manager with explicit approval; its Vault remains scheduled for deletion under OCI retention.
+
+The reviewed source is public at [lasttable-cloud-native](https://github.com/gtuttolomondo/lasttable-cloud-native). OCI DevOps is the canonical build source; GitHub is a mirror. The November CI repair pins the locally released bases and installed dependencies and checks source, frontend assets, 30 backend tests and the Function protocol. See [CI validation and release boundaries](docs/ci-flow.md) for the registry policy and production routing controls.
 
 ## Credentials and release boundaries
 
@@ -55,7 +57,7 @@ Two tenancy-level IAM dynamic groups match the exact build and deploy pipeline O
 
 Runtime access uses OKE Workload Identity or Function Resource Principals and per-role Vault permissions. No user API key belongs in an image or pod. SMTP credentials and database passwords stay in Vault. Terraform state can contain generated secrets: restrict access to Resource Manager state and private evidence.
 
-The infrastructure ZIP and source export use explicit allowlists. They exclude local credentials, Terraform state/plans, database wallets, recipient information, node modules and caches. Public GitHub publication is a later step and is not performed by these scripts.
+The infrastructure ZIP and source export use explicit allowlists. They exclude local credentials, Terraform state/plans, database wallets, recipient information, node modules and caches. GitHub mirror publication is performed separately from the OCI source export.
 
 ## Cleanup
 
